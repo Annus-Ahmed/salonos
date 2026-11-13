@@ -13,6 +13,7 @@ import {
 } from "@/server/queries";
 import { originGuard, failure, readJson } from "@/server/http";
 import { sendBookingConfirmation } from "@/server/booking-sms";
+import { sendBookingEmail } from "@/server/booking-email";
 import { DomainError, requireManager, today, validDay } from "@/lib/domain";
 import { db } from "@/db";
 import * as s from "@/db/schema";
@@ -264,14 +265,13 @@ export async function POST(req: NextRequest, ctx: Context) {
       req.headers.get("idempotency-key") ?? "",
     );
     if (path === "bookings" && result.receipt) {
-      try {
-        return NextResponse.json({
-          ...result,
-          sms: await sendBookingConfirmation(result.id, result.receipt),
-        });
-      } catch {
-        return NextResponse.json({ ...result, sms: "failed" });
-      }
+      const [sms, email] = await Promise.all([
+        sendBookingConfirmation(result.id, result.receipt).catch(
+          () => "failed",
+        ),
+        sendBookingEmail(result.id, result.receipt).catch(() => "failed"),
+      ]);
+      return NextResponse.json({ ...result, sms, email });
     }
     return NextResponse.json(result);
   } catch (e) {

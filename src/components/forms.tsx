@@ -238,12 +238,22 @@ export function RecordForm({
           String(result.sms) as
             "unconfigured" | "failed" | "pending" | "accepted"
         ];
+        const email = {
+          missing_email: "No email address on the client profile.",
+          unconfigured: "Booking email is not configured.",
+          failed: "The booking email could not be sent.",
+          pending: "Booking email status is pending.",
+          accepted: "Booking email accepted for delivery.",
+        }[
+          String(result.email) as
+            "missing_email" | "unconfigured" | "failed" | "pending" | "accepted"
+        ];
         try {
           printBookingReceipt(result.receipt);
-          notify(["Booking saved.", sms].filter(Boolean).join(" "));
+          notify(["Booking saved.", email, sms].filter(Boolean).join(" "));
         } catch {
           notify(
-            ["Booking saved. Open its details to print.", sms]
+            ["Booking saved. Open its details to print.", email, sms]
               .filter(Boolean)
               .join(" "),
             true,

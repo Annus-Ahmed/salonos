@@ -45,7 +45,11 @@ try {
         const defaults: Record<string, Record<string, string | null>> = {
           settings: { bankQrUrl: null },
           services: { details: null },
-          bookings: { initialPaymentMethod: null, confirmationSms: null },
+          bookings: {
+            initialPaymentMethod: null,
+            confirmationSms: null,
+            confirmationEmail: null,
+          },
           booking_items: { customName: "", detailId: null, detailName: null },
         };
         const missing = Object.entries(columnsByField)

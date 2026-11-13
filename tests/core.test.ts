@@ -831,3 +831,56 @@ test("stock purchases and retail sales update inventory and balanced retail repo
     150,
   );
 });
+
+test("booking email uses the client profile and sends once across concurrent requests", async (t) => {
+  const { sendBookingEmail } = await import("../src/server/booking-email");
+  const c = await client();
+  const svc = await service("1000");
+  const b = await command("booking.save", {
+    customerId: c.id,
+    appointmentDate: today(),
+    appointmentTime: "15:30",
+    category: "Party",
+    paymentMethod: "Cash",
+    advance: "250",
+    items: [{ serviceId: svc.id, quantity: 1 }],
+  });
+  assert.equal(await sendBookingEmail(b.id, b.receipt), "missing_email");
+
+  await command("client.save", { ...c, email: "booking-client@example.test" });
+  const keys = ["RESEND_API_KEY", "BOOKING_EMAIL_FROM"] as const;
+  const prior = keys.map((key) => process.env[key]);
+  t.after(() =>
+    keys.forEach((key, i) => {
+      if (prior[i] === undefined) delete process.env[key];
+      else process.env[key] = prior[i];
+    }),
+  );
+  delete process.env.RESEND_API_KEY;
+  assert.equal(await sendBookingEmail(b.id, b.receipt), "unconfigured");
+  process.env.RESEND_API_KEY = "test-key";
+  process.env.BOOKING_EMAIL_FROM = "Salon <booking@example.test>";
+  const provider = t.mock.method(
+    globalThis,
+    "fetch",
+    async (_url: unknown, _options: RequestInit) =>
+      new Response(null, { status: 201 }),
+  );
+  const results = await Promise.all([
+    sendBookingEmail(b.id, b.receipt),
+    sendBookingEmail(b.id, b.receipt),
+  ]);
+  assert.ok(results.includes("accepted"));
+  assert.equal(await sendBookingEmail(b.id, b.receipt), "accepted");
+  assert.equal(provider.mock.callCount(), 1);
+  const [url, options] = provider.mock.calls[0].arguments;
+  assert.equal(url, "https://api.resend.com/emails");
+  const payload = JSON.parse(String(options?.body));
+  assert.deepEqual(payload.to, ["booking-client@example.test"]);
+  assert.match(payload.subject, /Booking confirmed/);
+  assert.ok(payload.text.includes(b.code));
+  assert.ok(payload.text.includes(b.appointmentDate));
+  assert.ok(payload.text.includes("15:30 (Pakistan time)"));
+  assert.ok(payload.text.includes(svc.name));
+  assert.match(payload.text, /Remaining balance: (?:PKR|Rs)\s*750/);
+});

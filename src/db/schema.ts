@@ -107,6 +107,7 @@ export const bookings = pgTable(
       keyof typeof import("@/lib/domain").BOOKING_PAYMENT_LABELS
     >(),
     confirmationSms: text("confirmation_sms"),
+    confirmationEmail: text("confirmation_email"),
     version: integer("version").notNull().default(1),
     completedDate: date("completed_date"),
     cancelReason: text("cancel_reason"),
