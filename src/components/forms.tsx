@@ -28,7 +28,7 @@ export function RecordForm({
   onClose: () => void;
   onSaved?: (result: any) => void;
 }) {
-  const { data, actor, mutate, notify, refresh } = useWorkspace();
+  const { data, mutate, notify, refresh } = useWorkspace();
   const d = data!;
   const [busy, setBusy] = useState(false),
     [error, setError] = useState("");
@@ -170,7 +170,7 @@ export function RecordForm({
           artist: str("artist"),
           hairstylist: str("hairstylist"),
           notes: str("notes"),
-          discount,
+          discount: discount || "0",
           items: items.map(({ customize, detailId, ...item }) => ({
             ...item,
             detailId: detailId || null,
@@ -696,7 +696,6 @@ export function RecordForm({
                     type="number"
                     min="0"
                     step="0.01"
-                    readOnly={actor.role === "receptionist"}
                     value={discount}
                     onChange={(e) => setDiscount(e.target.value)}
                   />
@@ -705,6 +704,12 @@ export function RecordForm({
                   <span>Net booking value</span>
                   <strong>{formatMoney(netMinor)}</strong>
                 </div>
+                {record?.id && (
+                  <div>
+                    <span>Remaining balance</span>
+                    <strong>{formatMoney(netMinor - record.collected)}</strong>
+                  </div>
+                )}
               </div>
               {!record?.id && (
                 <>

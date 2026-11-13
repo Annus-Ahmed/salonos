@@ -689,6 +689,7 @@ test("reception books a manager-priced sub-service and posts its advance exactly
     category: "Salon",
     paymentMethod: "Card",
     advance: "250",
+    discount: "100",
     items: [
       {
         serviceId: svc.id,
@@ -704,15 +705,17 @@ test("reception books a manager-priced sub-service and posts its advance exactly
   const repeated = await execute(receptionist, "booking.save", details, key);
   assert.equal(repeated.id, b.id);
   assert.equal(b.receipt.advance, 25000);
-  assert.equal(b.receipt.remaining, 50000);
+  assert.equal(b.receipt.discount, 10000);
+  assert.equal(b.receipt.net, 65000);
+  assert.equal(b.receipt.remaining, 40000);
   assert.deepEqual(b.receipt.services, ["Facial - Face Mask Only"]);
   await assert.rejects(
-    act("booking.save", { ...details, advance: "751" }),
+    act("booking.save", { ...details, advance: "651" }),
     /advance exceeds/i,
   );
   await assert.rejects(
-    act("booking.save", { ...details, discount: "100" }),
-    /only the finance manager/i,
+    act("booking.save", { ...details, discount: "751" }),
+    /Discount cannot exceed/,
   );
   await assert.rejects(
     act("booking.save", {
@@ -761,7 +764,7 @@ test("reception books a manager-priced sub-service and posts its advance exactly
   const view = receptionView.bookings.find((row: any) => row.id === b.id);
   assert.equal(view.items[0].customName, "Mask only");
   assert.equal(view.items[0].name, svc.name);
-  assert.equal(view.outstanding, 50000);
+  assert.equal(view.outstanding, 40000);
   const posted = await db()
     .select()
     .from(s.payments)
@@ -775,7 +778,7 @@ test("reception books a manager-priced sub-service and posts its advance exactly
     svc.priceMinor,
   );
   assert.deepEqual(receptionView.ledger, []);
-  await receive(b, "500");
+  await receive(b, "400");
   assert.equal(
     (await snapshot(owner)).bookings.find((row: any) => row.id === b.id)
       .outstanding,

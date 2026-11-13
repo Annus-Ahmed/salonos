@@ -493,13 +493,6 @@ async function run(
       }
       const subtotalMinor = items.reduce((a, l) => a + l.lineTotalMinor, 0);
       const discountMinor = money(p.discount);
-      if (actor.role === "receptionist") {
-        if (discountMinor !== (editing?.b.discountMinor ?? 0))
-          throw new DomainError(
-            "Only the finance manager can change the discount.",
-            403,
-          );
-      }
       if (discountMinor > subtotalMinor)
         throw new DomainError("Discount cannot exceed the service total.");
       const totalMinor = subtotalMinor - discountMinor;
